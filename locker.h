@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <exception>
 #include <semaphore.h>
+#include <stddef.h>
 
 // 线程同步机制封装类
 

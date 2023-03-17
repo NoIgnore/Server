@@ -47,7 +47,7 @@ threadpool<T>::threadpool(int thread_number, int max_requests) : m_thread_number
     if ((thread_number <= 0) || (max_requests <= 0))
         throw std::exception();
     m_threads = new pthread_t[m_thread_number];
-    if (!= m_threads)
+    if (!m_threads)
     {
         throw std::exception();
     }
@@ -60,7 +60,7 @@ threadpool<T>::threadpool(int thread_number, int max_requests) : m_thread_number
             delete[] m_threads;
             throw std::exception();
         }
-        if (pthread_detach(m_thread[i]))
+        if (pthread_detach(m_threads[i]))
         {
             delete[] m_threads;
             throw std::exception();
@@ -112,7 +112,7 @@ void threadpool<T>::run()
         }
 
         T *request = m_workqueue.front();
-        m_workqueue.push_front();
+        m_workqueue.pop_front();
         m_queuelocker.unlock();
         if (!request)
             continue;
