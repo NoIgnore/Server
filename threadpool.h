@@ -60,7 +60,8 @@ threadpool<T>::threadpool(int thread_number, int max_requests) : m_thread_number
             delete[] m_threads;
             throw std::exception();
         }
-        if (pthread_detach(m_threads[i]))
+        //函数参数thread是要设置为脱离状态的线程的标识符。如果函数调用成功，则返回0，否则返回一个非0的错误码
+        if (pthread_detach(m_threads[i]))//将线程设置为脱离状态，以便线程结束时可以自动释放其资源。
         {
             delete[] m_threads;
             throw std::exception();

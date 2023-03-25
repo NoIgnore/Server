@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 
     // 将监听的的文件描述符添加到epoll对象中
     addfd(epollfd, listenfd, false);
-    http_conn::m_epollfd = epollfd;
+    http_conn::m_epollfd = epollfd;//m_epollfd为静态变量
     while (true)
     {
         int num = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, -1);

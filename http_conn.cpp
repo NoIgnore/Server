@@ -6,9 +6,9 @@ int http_conn::m_user_count = 0; // calculate the users number
 // 设置文件描述符非阻塞
 void setnonblocking(int fd)
 {
-    int old_flag = fcntl(fd, F_GETFL);
-    int new_lag = old_flag | O_NONBLOCK;
-    fcntl(fd, F_SETFL, new_lag);
+    int old_flag = fcntl(fd, F_GETFL);//先获取文件描述符的属性
+    int new_lag = old_flag | O_NONBLOCK;//将文件描述符按位或操作
+    fcntl(fd, F_SETFL, new_lag);//设置文件描述符属性
 }
 
 // 添加文件描述符到epoll中
@@ -19,7 +19,7 @@ void addfd(int epollfd, int fd, bool one_shot)
     event.events = EPOLLIN | EPOLLRDHUP;
     if (one_shot)
     {
-        event.events | EPOLLONESHOT;
+        event.events | EPOLLONESHOT;//EPOLLONESHOT：只监听一次事件后自动从 epoll 实例中删除
     }
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
     // 设置文件描述符非阻塞
