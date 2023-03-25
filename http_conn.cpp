@@ -6,9 +6,9 @@ int http_conn::m_user_count = 0; // calculate the users number
 // 设置文件描述符非阻塞
 void setnonblocking(int fd)
 {
-    int old_flag = fcntl(fd, F_GETFL);//先获取文件描述符的属性
-    int new_lag = old_flag | O_NONBLOCK;//将文件描述符按位或操作
-    fcntl(fd, F_SETFL, new_lag);//设置文件描述符属性
+    int old_flag = fcntl(fd, F_GETFL);   // 先获取文件描述符的属性
+    int new_lag = old_flag | O_NONBLOCK; // 将文件描述符按位或操作
+    fcntl(fd, F_SETFL, new_lag);         // 设置文件描述符属性
 }
 
 // 添加文件描述符到epoll中
@@ -16,10 +16,10 @@ void addfd(int epollfd, int fd, bool one_shot)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = EPOLLIN | EPOLLRDHUP;
+    event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;//为了测试http://192.168.0.119:10000/暂时使用EPOLLET
     if (one_shot)
     {
-        event.events | EPOLLONESHOT;//EPOLLONESHOT：只监听一次事件后自动从 epoll 实例中删除
+        event.events | EPOLLONESHOT; // EPOLLONESHOT：只监听一次事件后自动从 epoll 实例中删除
     }
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
     // 设置文件描述符非阻塞
@@ -70,7 +70,32 @@ void http_conn::close_conn()
 
 bool http_conn::read() // 非阻塞的读
 {
-    printf("一次性读完数据\n");
+    if (m_read_idx >= READ_BUFFER_SIZE)
+    {
+        return false;
+    }
+    int bytes_read = 0;
+    while (true)
+    {
+        // 从m_read_buf + m_read_idx索引出开始保存数据，大小是READ_BUFFER_SIZE - m_read_idx
+        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx,
+                          READ_BUFFER_SIZE - m_read_idx, 0);
+        if (bytes_read == -1)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // 没有数据
+                break;
+            }
+            return false;
+        }
+        else if (bytes_read == 0)
+        { // 对方关闭连接
+            return false;
+        }
+        m_read_idx += bytes_read;
+    }
+    printf("get %s\n", m_read_buf);//不能用https，妈的用http://192.168.0.119:10000/
     return true;
 }
 

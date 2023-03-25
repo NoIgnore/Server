@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     int port = atoi(argv[1]);
 
-    // 对SIGPIE信号处理
+    // 对SIGPIE信号处理，将程序对 SIGPIPE 信号的处理方式设置为忽略
     addsig(SIGFPE, SIG_IGN);
 
     // 初始化线程池
