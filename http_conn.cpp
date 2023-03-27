@@ -202,7 +202,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
         return BAD_REQUEST;
     }
     *m_version++ = '\0';// http://192.168.110.129:10000/index.html\0HTTP/1.1，我们这里取后半部分HTTP/1.1
-    if (strcasecmp(m_version, "HTTP/1.1") != 0)
+    if (strcasecmp(m_version, "HTTP/1.1") != 0)//压力测试时这里要改成"HTTP/1.0"
     {
         return BAD_REQUEST;
     }
