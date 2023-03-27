@@ -38,6 +38,27 @@
             "cStandard": "c17",
             "cppStandard": "c++14",
             "intelliSenseMode": "linux-clang-x64"
+        },
+        {
+            "name": "win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/i686-w64-mingw32",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include/c++/backward",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/include-fixed",
+                "D:/MinGW/bin/../lib/gcc/i686-w64-mingw32/8.1.0/../../../../i686-w64-mingw32/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "D:\\MinGW\\bin\\gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "windows-gcc-x86"
         }
     ],
     "version": 4
