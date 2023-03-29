@@ -65,13 +65,13 @@ threadpool<T>::threadpool(int thread_number, int max_requests) : m_thread_number
     for (int i = 0; i < thread_number; ++i)
     {
         printf("create the %dth thread\n", i);
-        if (pthread_create(m_threads + i, NULL, worker, this) != 0)
-        {
+        if (pthread_create(m_threads + i, NULL, worker, this) != 0)//create完之后就执行了work函数
+        {//pthread_create()第三个参数只能接受静态函数或全局函数作为参数:invalid use of non-static member function
             delete[] m_threads;
             throw std::exception();
         }
 
-        if (pthread_detach(m_threads[i]))
+        if (pthread_detach(m_threads[i]))//返回值为0表示成功，非0值表示出现错误
         {
             delete[] m_threads;
             throw std::exception();
@@ -98,12 +98,12 @@ bool threadpool<T>::append(T *request)
     }
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
-    m_queuestat.post();
+    m_queuestat.post();//等到这里才开始释放信号量，从而线程的run函数可以运行
     return true;
 }
 
 template <typename T>
-void *threadpool<T>::worker(void *arg)
+void *threadpool<T>::worker(void *arg)//main.cpp里线程池被创建的时候就开始了，也就是上面的构造函数那里
 {
     threadpool *pool = (threadpool *)arg;
     pool->run();
@@ -116,7 +116,7 @@ void threadpool<T>::run()
 
     while (!m_stop)
     {
-        m_queuestat.wait();
+        m_queuestat.wait();//一直阻塞等待信号量
         m_queuelocker.lock();
         if (m_workqueue.empty())
         {
@@ -130,7 +130,7 @@ void threadpool<T>::run()
         {
             continue;
         }
-        request->process();
+        request->process();//http_conn.cpp start to deal with the process()
     }
 }
 
