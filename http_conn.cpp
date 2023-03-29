@@ -125,7 +125,7 @@ bool http_conn::read()
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                // 没有数据
+                //EAGAIN和EWOULDBLOCK都表示一个系统调用（例如read()或write()）当前不能立即完成，因为没有任何数据可供读取或写入。这可以发生在套接字缓冲区被填满或读取的文件末尾等情况下。
                 break;
             }
             return false;

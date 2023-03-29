@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     int reuse = 1;
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     ret = bind(listenfd, (struct sockaddr *)&address, sizeof(address));
-    ret = listen(listenfd, 5);
+    ret = listen(listenfd, 5); // 表示操作系统在内部维护的已连接队列的最大长度。连接到达时，如果已连接队列已满，新的连接请求将会被拒绝或者阻塞，根据具体实现而定
 
     // 创建epoll对象，和事件数组，添加
     epoll_event events[MAX_EVENT_NUMBER];
