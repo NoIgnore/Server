@@ -343,8 +343,9 @@ http_conn::HTTP_CODE http_conn::do_request()
     // "/home/nowcoder/webserver/resources"
     strcpy(m_real_file, doc_root);
     int len = strlen(doc_root);
-    strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);
+    strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);//此时的m_url被分解为了/index.html
     // 获取m_real_file文件的相关的状态信息，-1失败，0成功
+    // 将请求的文件路径作为参数传给stat()函数，同时将m_file_stat作为输出参数，用于存储获取到的文件状态信息。如果stat()函数执行成功，则返回0，否则返回-1。如果返回值小于0，说明获取文件状态信息失败，函数会返回NO_RESOURCE错误码。
     if (stat(m_real_file, &m_file_stat) < 0)
     {
         return NO_RESOURCE;
@@ -370,6 +371,28 @@ http_conn::HTTP_CODE http_conn::do_request()
     return FILE_REQUEST;
 }
 
+// 如果不使用内存映射，可以使用标准的文件IO函数（如`fread()`、`fseek()`、`ftell()`等）来读取文件内容。
+
+// 具体来说，可以按照以下步骤读取文件内容：
+// 1. 使用`fopen()`函数打开文件，代码如下：
+//    FILE *fp = fopen(m_real_file, "rb");
+//    其中，`m_real_file`是请求的文件路径，`"rb"`表示以二进制只读方式打开文件。
+// 2. 使用`fseek()`函数将文件指针定位到文件末尾，代码如下：
+//    fseek(fp, 0, SEEK_END);
+//    其中，`SEEK_END`表示相对于文件末尾进行偏移。
+// 3. 使用`ftell()`函数获取文件大小，代码如下：
+//    long file_size = ftell(fp);
+// 4. 使用`fseek()`函数将文件指针定位到文件起始位置，代码如下：
+//    fseek(fp, 0, SEEK_SET);
+// 5. 创建缓冲区，读取文件内容到缓冲区中，代码如下：
+//    char *buffer = (char *)malloc(file_size);
+//    fread(buffer, 1, file_size, fp);
+//    其中，`malloc()`函数用于动态分配内存，`fread()`函数用于从文件中读取数据到缓冲区中。
+// 6. 关闭文件，释放缓冲区，代码如下：
+//    fclose(fp);
+//    free(buffer);
+// 这样就可以读取文件内容了。需要注意的是，使用标准的文件IO函数可能会频繁地进行磁盘IO操作，对服务器性能有一定的影响。而使用内存映射可以避免频繁的磁盘IO操作，提高服务器的性能。
+
 // 对内存映射区执行munmap操作
 void http_conn::unmap()
 {
@@ -381,7 +404,7 @@ void http_conn::unmap()
 }
 
 // 写HTTP响应
-bool http_conn::write()
+bool http_conn::write()//carried out by the main thread
 {
     int temp = 0;
 
@@ -397,12 +420,13 @@ bool http_conn::write()
     {
         // 分散写
         temp = writev(m_sockfd, m_iv, m_iv_count);
+        // writev()函数会将指定的iovec结构体数组中的每一块数据按照数组顺序依次写入到文件或套接字中，返回实际写入的字节数。如果出现错误，writev()函数返回-1
         if (temp <= -1)
         {
             // 如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件，虽然在此期间，
             // 服务器无法立即接收到同一客户的下一个请求，但可以保证连接的完整性。
             if (errno == EAGAIN)
-            {
+            {   //EAGAIN是一个错误码，表示资源暂时不可用，需要重试操作。这个错误码通常在非阻塞I/O操作返回时出现，表示操作无法立即完成，需要等待一段时间再重试。
                 modfd(m_epollfd, m_sockfd, EPOLLOUT);
                 return true;
             }
@@ -445,7 +469,7 @@ bool http_conn::write()
 }
 
 // 往写缓冲中写入待发送的数据
-bool http_conn::add_response(const char *format, ...)
+bool http_conn::add_response(const char *format, ...)//"..."represent numerous parameters
 {
     if (m_write_idx >= WRITE_BUFFER_SIZE)
     {
@@ -538,7 +562,7 @@ bool http_conn::process_write(HTTP_CODE ret)
                 return false;
             }
             break;
-        case FILE_REQUEST:
+        case FILE_REQUEST:// child thread handles the write buffer and the contents of the response body
             add_status_line(200, ok_200_title);
             add_headers(m_file_stat.st_size);
             m_iv[0].iov_base = m_write_buf;
