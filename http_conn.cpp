@@ -263,7 +263,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text)
     }
     else
     {
-        printf("oop! unknow header %s\n", text);
+        printf("Unrecognizable Header:  %s\n", text);
     }
     return NO_REQUEST;
 }
@@ -290,7 +290,6 @@ http_conn::HTTP_CODE http_conn::process_read()
         // 获取一行数据
         text = get_line(); // parse_line()把数据参杂了结束符'\0'，所以text = get_line()只读取到了截止位置，m_start_line = m_checked_idx又可以开始"新的一行"开头开始读
         m_start_line = m_checked_idx;
-        printf("got 1 http line: %s\n", text);
 
         switch (m_check_state)
         {

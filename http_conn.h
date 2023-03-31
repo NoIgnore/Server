@@ -20,6 +20,7 @@
 #include <errno.h>
 #include "locker.h"
 #include <sys/uio.h>
+#include "lst_timer.h"
 
 class http_conn
 {
