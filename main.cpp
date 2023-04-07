@@ -22,6 +22,7 @@ static int epollfd;
 
 // 添加文件描述符
 extern void addfd(int epollfd, int fd, bool one_shot);
+extern void modfd(int epollfd, int fd, int ev);
 extern void removefd(int epollfd, int fd);
 extern int setnonblocking(int fd);
 
@@ -110,9 +111,10 @@ int main(int argc, char *argv[])
 
     // 创建管道
     ret = socketpair(PF_UNIX, SOCK_STREAM, 0, pipefd);
-    assert( ret != -1 );
+    assert(ret != -1);
     setnonblocking(pipefd[1]);
-    addfd(epollfd, pipefd[0], EPOLLIN | EPOLLET);
+    addfd(epollfd, pipefd[0], false);
+    modfd(epollfd, pipefd[0], EPOLLET);
 
     bool timeout = false;
     client_data *client_users = new client_data[MAX_FD];
