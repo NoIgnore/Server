@@ -123,7 +123,8 @@ int main(int argc, char *argv[])
     bool stop_server = false;
     while (!stop_server)
     {
-
+        //epoll 使用事件驱动的机制，内核里维护了一个链表来记录就绪事件，当某个 socket 有事件发生时，通过回调函数内核会将其加入到这个就绪事件
+        //列表中，当用户调用 epoll_wait() 函数时，只会返回有事件发生的文件描述符的个数，并将链表复制给events
         int number = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, -1);
 
         if ((number < 0) && (errno != EINTR))
