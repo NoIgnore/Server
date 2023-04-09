@@ -23,7 +23,7 @@ int setnonblocking(int fd)
 }
 
 // 向epoll中添加需要监听的文件描述符
-void addfd(int epollfd, int fd, bool one_shot, uint32_t add_ev = NULL, uint32_t df_ev = EPOLLIN)
+void addfd(int epollfd, int fd, bool one_shot, uint32_t add_ev = 0, uint32_t df_ev = EPOLLIN)
 {
     epoll_event event;
     event.data.fd = fd;
@@ -46,7 +46,7 @@ void removefd(int epollfd, int fd)
 }
 
 // 修改文件描述符，重置socket上的EPOLLONESHOT事件，以确保下一次可读时，EPOLLIN事件能被触发
-void modfd(int epollfd, int fd, uint32_t add_ev = NULL, uint32_t df_ev = EPOLLET | EPOLLONESHOT)
+void modfd(int epollfd, int fd, uint32_t add_ev = 0, uint32_t df_ev = EPOLLET | EPOLLONESHOT)
 {
     epoll_event event;
     event.data.fd = fd;

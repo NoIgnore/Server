@@ -21,7 +21,7 @@ static sort_timer_lst timer_lst;
 static int epollfd;
 
 // 添加文件描述符
-extern void addfd(int epollfd, int fd, bool one_shot, uint32_t add_ev = NULL, uint32_t df_ev = EPOLLIN);
+extern void addfd(int epollfd, int fd, bool one_shot, uint32_t add_ev = 0, uint32_t df_ev = EPOLLIN);
 extern void removefd(int epollfd, int fd);
 extern int setnonblocking(int fd);
 
