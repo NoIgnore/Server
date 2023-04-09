@@ -23,11 +23,11 @@ int setnonblocking(int fd)
 }
 
 // 向epoll中添加需要监听的文件描述符
-void addfd(int epollfd, int fd, bool one_shot)
+void addfd(int epollfd, int fd, bool one_shot, uint32_t add_ev = NULL, uint32_t df_ev = EPOLLIN)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = EPOLLIN | EPOLLRDHUP;
+    event.events = df_ev | add_ev | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
     if (one_shot)
     {
         // 防止同一个通信被不同的线程处理
@@ -46,11 +46,11 @@ void removefd(int epollfd, int fd)
 }
 
 // 修改文件描述符，重置socket上的EPOLLONESHOT事件，以确保下一次可读时，EPOLLIN事件能被触发
-void modfd(int epollfd, int fd, int ev)
+void modfd(int epollfd, int fd, uint32_t add_ev = NULL, uint32_t df_ev = EPOLLET | EPOLLONESHOT)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
+    event.events = add_ev | df_ev | EPOLLRDHUP | EPOLLERR | EPOLLHUP;
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
 
@@ -125,7 +125,7 @@ bool http_conn::read()
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                //EAGAIN和EWOULDBLOCK都表示一个系统调用（例如read()或write()）当前不能立即完成，因为没有任何数据可供读取或写入。这可以发生在套接字缓冲区被填满或读取的文件末尾等情况下。
+                // EAGAIN和EWOULDBLOCK都表示一个系统调用（例如read()或write()）当前不能立即完成，因为没有任何数据可供读取或写入。这可以发生在套接字缓冲区被填满或读取的文件末尾等情况下。
                 break;
             }
             return false;
@@ -201,17 +201,17 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
     {
         return BAD_REQUEST;
     }
-    *m_version++ = '\0';// http://192.168.110.129:10000/index.html\0HTTP/1.1，我们这里取后半部分HTTP/1.1
-    if (strcasecmp(m_version, "HTTP/1.1") != 0)//压力测试时这里要改成"HTTP/1.0"
+    *m_version++ = '\0';                        // http://192.168.110.129:10000/index.html\0HTTP/1.1，我们这里取后半部分HTTP/1.1
+    if (strcasecmp(m_version, "HTTP/1.1") != 0) // 压力测试时这里要改成"HTTP/1.0"
     {
         return BAD_REQUEST;
     }
-    //http://192.168.110.129:10000/index.html
-    if (strncasecmp(m_url, "http://", 7) == 0)// http://192.168.110.129:10000/index.html\0
+    // http://192.168.110.129:10000/index.html
+    if (strncasecmp(m_url, "http://", 7) == 0) // http://192.168.110.129:10000/index.html\0
     {
-        m_url += 7;//url = 192.168.110.129:10000/index.html
+        m_url += 7; // url = 192.168.110.129:10000/index.html
         // 在参数 str 所指向的字符串中搜索第一次出现字符 c（一个无符号字符）的位置。
-        m_url = strchr(m_url, '/');//url = /index.html
+        m_url = strchr(m_url, '/'); // url = /index.html
     }
     if (!m_url || m_url[0] != '/')
     {
@@ -342,7 +342,7 @@ http_conn::HTTP_CODE http_conn::do_request()
     // "/home/nowcoder/webserver/resources"
     strcpy(m_real_file, doc_root);
     int len = strlen(doc_root);
-    strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);//此时的m_url被分解为了/index.html
+    strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1); // 此时的m_url被分解为了/index.html
     // 获取m_real_file文件的相关的状态信息，-1失败，0成功
     // 将请求的文件路径作为参数传给stat()函数，同时将m_file_stat作为输出参数，用于存储获取到的文件状态信息。如果stat()函数执行成功，则返回0，否则返回-1。如果返回值小于0，说明获取文件状态信息失败，函数会返回NO_RESOURCE错误码。
     if (stat(m_real_file, &m_file_stat) < 0)
@@ -403,7 +403,7 @@ void http_conn::unmap()
 }
 
 // 写HTTP响应
-bool http_conn::write()//carried out by the main thread
+bool http_conn::write() // carried out by the main thread
 {
     int temp = 0;
 
@@ -425,7 +425,7 @@ bool http_conn::write()//carried out by the main thread
             // 如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件，虽然在此期间，
             // 服务器无法立即接收到同一客户的下一个请求，但可以保证连接的完整性。
             if (errno == EAGAIN)
-            {   //EAGAIN是一个错误码，表示资源暂时不可用，需要重试操作。这个错误码通常在非阻塞I/O操作返回时出现，表示操作无法立即完成，需要等待一段时间再重试。
+            { // EAGAIN是一个错误码，表示资源暂时不可用，需要重试操作。这个错误码通常在非阻塞I/O操作返回时出现，表示操作无法立即完成，需要等待一段时间再重试。
                 modfd(m_epollfd, m_sockfd, EPOLLOUT);
                 return true;
             }
@@ -468,7 +468,7 @@ bool http_conn::write()//carried out by the main thread
 }
 
 // 往写缓冲中写入待发送的数据
-bool http_conn::add_response(const char *format, ...)//"..."represent numerous parameters
+bool http_conn::add_response(const char *format, ...) //"..."represent numerous parameters
 {
     if (m_write_idx >= WRITE_BUFFER_SIZE)
     {
@@ -529,52 +529,52 @@ bool http_conn::process_write(HTTP_CODE ret)
 {
     switch (ret)
     {
-        case INTERNAL_ERROR:
-            add_status_line(500, error_500_title);
-            add_headers(strlen(error_500_form));
-            if (!add_content(error_500_form))
-            {
-                return false;
-            }
-            break;
-        case BAD_REQUEST:
-            add_status_line(400, error_400_title);
-            add_headers(strlen(error_400_form));
-            if (!add_content(error_400_form))
-            {
-                return false;
-            }
-            break;
-        case NO_RESOURCE:
-            add_status_line(404, error_404_title);
-            add_headers(strlen(error_404_form));
-            if (!add_content(error_404_form))
-            {
-                return false;
-            }
-            break;
-        case FORBIDDEN_REQUEST:
-            add_status_line(403, error_403_title);
-            add_headers(strlen(error_403_form));
-            if (!add_content(error_403_form))
-            {
-                return false;
-            }
-            break;
-        case FILE_REQUEST:// child thread handles the write buffer and the contents of the response body
-            add_status_line(200, ok_200_title);
-            add_headers(m_file_stat.st_size);
-            m_iv[0].iov_base = m_write_buf;
-            m_iv[0].iov_len = m_write_idx;
-            m_iv[1].iov_base = m_file_address;
-            m_iv[1].iov_len = m_file_stat.st_size;
-            m_iv_count = 2;
-
-            bytes_to_send = m_write_idx + m_file_stat.st_size;
-
-            return true;
-        default:
+    case INTERNAL_ERROR:
+        add_status_line(500, error_500_title);
+        add_headers(strlen(error_500_form));
+        if (!add_content(error_500_form))
+        {
             return false;
+        }
+        break;
+    case BAD_REQUEST:
+        add_status_line(400, error_400_title);
+        add_headers(strlen(error_400_form));
+        if (!add_content(error_400_form))
+        {
+            return false;
+        }
+        break;
+    case NO_RESOURCE:
+        add_status_line(404, error_404_title);
+        add_headers(strlen(error_404_form));
+        if (!add_content(error_404_form))
+        {
+            return false;
+        }
+        break;
+    case FORBIDDEN_REQUEST:
+        add_status_line(403, error_403_title);
+        add_headers(strlen(error_403_form));
+        if (!add_content(error_403_form))
+        {
+            return false;
+        }
+        break;
+    case FILE_REQUEST: // child thread handles the write buffer and the contents of the response body
+        add_status_line(200, ok_200_title);
+        add_headers(m_file_stat.st_size);
+        m_iv[0].iov_base = m_write_buf;
+        m_iv[0].iov_len = m_write_idx;
+        m_iv[1].iov_base = m_file_address;
+        m_iv[1].iov_len = m_file_stat.st_size;
+        m_iv_count = 2;
+
+        bytes_to_send = m_write_idx + m_file_stat.st_size;
+
+        return true;
+    default:
+        return false;
     }
 
     m_iv[0].iov_base = m_write_buf;
