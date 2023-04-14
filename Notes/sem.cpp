@@ -1,67 +1,53 @@
-#include <stdio.h>
-#include <pthread.h>
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 #include <semaphore.h>
 
-#define NUM_THREADS 5
+using namespace std;
 
-int shared_resource = 0;
-pthread_mutex_t mutex;
-sem_t semaphore;
+sem_t sem[5]; // 5个信号量，用于控制线程的执行顺序
 
-void *thread_function(void *arg)
+void thread_func(int id)
 {
-    int thread_num = *(int *)arg;
-
-    // 使用互斥量保护共享资源
-    pthread_mutex_lock(&mutex);
-    shared_resource++;
-    printf("Thread %d: shared_resource = %d\n", thread_num, shared_resource);
-    pthread_mutex_unlock(&mutex);
-
-    // 使用信号量协调线程执行顺序
-    sem_wait(&semaphore);//semaphore--
-    printf("Thread %d: semaphore\n", thread_num);
-    sem_post(&semaphore);//semaphore++
-
-    return NULL;
+    // 等待前一个线程释放信号量
+    sem_wait(&sem[id]);
+    cout << "Thread " << id << " is running" << endl;
+    // 释放下一个线程的信号量
+    if (id != 4)
+        sem_post(&sem[id + 1]);
+        else sem_post(&sem[0]);
 }
 
 int main()
 {
-    pthread_t threads[NUM_THREADS];
-    int thread_nums[NUM_THREADS];
-
-    // 初始化互斥量和信号量
-    pthread_mutex_init(&mutex, NULL);
-    sem_init(&semaphore, 0, 1);
-
-    // 创建线程
-    for (int i = 0; i < NUM_THREADS; i++)
+    // 初始化信号量，第一个线程可以直接运行
+    sem_init(&sem[0], 0, 0);
+    sem_init(&sem[1], 0, 1);//让1先运行
+    for (int i = 2; i < 5; i++)
     {
-        thread_nums[i] = i;
-        pthread_create(&threads[i], NULL, thread_function, &thread_nums[i]);
+        sem_init(&sem[i], 0, 0);
     }
 
-    // 等待线程结束
-    for (int i = 0; i < NUM_THREADS; i++)
+    // 创建 5 个线程
+    thread threads[5];
+    for (int i = 0; i < 5; i++)
     {
-        pthread_join(threads[i], NULL);
+        threads[i] = thread(thread_func, i);
     }
 
-    // 销毁互斥量和信号量
-    pthread_mutex_destroy(&mutex);
-    sem_destroy(&semaphore);
+    // 等待所有线程运行结束
+    for (int i = 0; i < 5; i++)
+    {
+        threads[i].join();
+    }
+
+    // 销毁信号量
+    for (int i = 0; i < 5; i++)
+    {
+        sem_destroy(&sem[i]);
+    }
 
     return 0;
 }
-// Thread 0: shared_resource = 1
-// Thread 0: semaphore
-// Thread 1: shared_resource = 2
-// Thread 1: semaphore
-// Thread 2: shared_resource = 3
-// Thread 2: semaphore
-// Thread 3: shared_resource = 4
-// Thread 3: semaphore
-// Thread 4: shared_resource = 5
-// Thread 4: semaphore
-//信号量为1，确保线程的执行顺序
